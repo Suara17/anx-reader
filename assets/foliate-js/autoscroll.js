@@ -17,36 +17,86 @@
     return minSpeed + (maxSpeed - minSpeed) * ((clamped - 1) / 9.0);
   }
 
-  function getScrollContainer() {
+  function getScrollTarget() {
     try {
-      // Method 1: foliate-paginator shadowRoot #container via reader.view.renderer
       const r = (typeof reader !== 'undefined' && reader) || globalThis.reader;
-      if (r && r.view && r.view.renderer && r.view.renderer.shadowRoot) {
-        const c = r.view.renderer.shadowRoot.querySelector('#container');
-        if (c && c.scrollHeight > c.clientHeight) return c;
-      }
-      // Method 2: foliate-paginator element directly in DOM or foliate-view shadowRoot
-      const paginators = document.querySelectorAll('foliate-paginator');
-      for (const p of paginators) {
-        if (p.shadowRoot) {
-          const c = p.shadowRoot.querySelector('#container');
-          if (c) return c;
+      const renderer = r?.view?.renderer;
+      if (renderer) {
+        const container = renderer.shadowRoot?.querySelector('#container');
+        if (container) {
+          return {
+            container: container,
+            renderer: renderer,
+            scroll: (delta) => {
+              if (typeof renderer.scrollBy === 'function') {
+                renderer.scrollBy(0, delta);
+              } else {
+                container.scrollTop += delta;
+              }
+            },
+            getScrollTop: () => container.scrollTop,
+          };
         }
       }
-      // Method 3: search all shadowRoots
+
+      // Method 2: foliate-view elements directly in DOM
       const views = document.querySelectorAll('foliate-view');
       for (const v of views) {
         if (v.shadowRoot) {
           const p = v.shadowRoot.querySelector('foliate-paginator');
           if (p && p.shadowRoot) {
             const c = p.shadowRoot.querySelector('#container');
-            if (c) return c;
+            if (c) {
+              return {
+                container: c,
+                renderer: p,
+                scroll: (delta) => {
+                  if (typeof p.scrollBy === 'function') {
+                    p.scrollBy(0, delta);
+                  } else {
+                    c.scrollTop += delta;
+                  }
+                },
+                getScrollTop: () => c.scrollTop,
+              };
+            }
           }
         }
       }
-      // Method 4: standard fallback to window or document scrollingElement
+
+      // Method 3: direct foliate-paginator
+      const paginators = document.querySelectorAll('foliate-paginator');
+      for (const p of paginators) {
+        if (p.shadowRoot) {
+          const c = p.shadowRoot.querySelector('#container');
+          if (c) {
+            return {
+              container: c,
+              renderer: p,
+              scroll: (delta) => {
+                if (typeof p.scrollBy === 'function') {
+                  p.scrollBy(0, delta);
+                } else {
+                  c.scrollTop += delta;
+                }
+              },
+              getScrollTop: () => c.scrollTop,
+            };
+          }
+        }
+      }
+
+      // Method 4: fallback to document scrollingElement
       if (document.scrollingElement && document.scrollingElement.scrollHeight > window.innerHeight) {
-        return document.scrollingElement;
+        const el = document.scrollingElement;
+        return {
+          container: el,
+          renderer: null,
+          scroll: (delta) => {
+            el.scrollTop += delta;
+          },
+          getScrollTop: () => el.scrollTop,
+        };
       }
     } catch (e) {
       console.warn('[AutoScroll] Error finding scroll container:', e);
@@ -66,6 +116,23 @@
     } catch (e) {}
   }
 
+  function triggerNextPage() {
+    try {
+      if (typeof window.nextPage === 'function') {
+        window.nextPage();
+      } else if (globalThis.reader?.view?.next) {
+        globalThis.reader.view.next();
+      } else {
+        const paginator = document.querySelector('foliate-view')?.shadowRoot?.querySelector('foliate-paginator');
+        if (paginator && typeof paginator.next === 'function') {
+          paginator.next();
+        }
+      }
+    } catch (e) {
+      console.warn('[AutoScroll] Error calling next page:', e);
+    }
+  }
+
   function step(timestamp) {
     if (!isScrolling) return;
 
@@ -76,8 +143,8 @@
     lastTimestamp = timestamp;
 
     if (!isPaused && !isTouching) {
-      const container = getScrollContainer();
-      if (container) {
+      const target = getScrollTarget();
+      if (target) {
         const pxPerSec = getSpeedPxPerSec(speedLevel);
         accumulatedDelta += (pxPerSec * elapsedMs) / 1000.0;
 
@@ -85,14 +152,13 @@
           const pixelsToScroll = Math.floor(accumulatedDelta);
           accumulatedDelta -= pixelsToScroll;
 
-          const oldTop = container.scrollTop;
-          container.scrollTop += pixelsToScroll;
+          const oldTop = target.getScrollTop();
+          target.scroll(pixelsToScroll);
+          const newTop = target.getScrollTop();
 
           // If reached bottom of current container/section in continuous scroll, trigger next page
-          if (container.scrollTop === oldTop && pixelsToScroll > 0) {
-            if (typeof nextPage === 'function') {
-              nextPage();
-            }
+          if (newTop === oldTop && pixelsToScroll > 0) {
+            triggerNextPage();
           }
         }
       } else {
