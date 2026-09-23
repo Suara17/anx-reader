@@ -2,7 +2,7 @@ import 'package:anx_reader/enums/ai_reasoning_effort.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'ai_provider.freezed.dart';
-part 'ai_provider.g.dart';
+// part 'ai_provider.g.dart';
 
 /// AI protocol type enumeration
 enum AiProtocol {
@@ -117,6 +117,32 @@ abstract class AiProvider with _$AiProvider {
   bool get hasValidKey {
     return apiKeys.any((k) => k.enabled && k.key.isNotEmpty);
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'logoAsset': logoAsset,
+      'url': url,
+      'protocol': protocol.code,
+      'enabled': enabled,
+      'isBuiltin': isBuiltin,
+      'apiKeys': apiKeys
+          .map((k) => {
+                'id': k.id,
+                'key': k.key,
+                'enabled': k.enabled,
+                'label': k.label,
+                'createdAt': k.createdAt?.toIso8601String(),
+              })
+          .toList(),
+      'model': model,
+      'reasoningEffort': reasoningEffort.code,
+      'keyIndex': keyIndex,
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+    };
+  }
 }
 
 @freezed
@@ -131,6 +157,25 @@ abstract class AiApiKey with _$AiApiKey {
     DateTime? createdAt, // Creation time
   }) = _AiApiKey;
 
-  factory AiApiKey.fromJson(Map<String, dynamic> json) =>
-      _$AiApiKeyFromJson(json);
+  factory AiApiKey.fromJson(Map<String, dynamic> json) {
+    return AiApiKey(
+      id: json['id']?.toString() ?? '',
+      key: json['key']?.toString() ?? '',
+      enabled: json['enabled'] as bool? ?? true,
+      label: json['label']?.toString(),
+      createdAt: json['createdAt'] == null
+          ? null
+          : DateTime.tryParse(json['createdAt'].toString()),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'key': key,
+      'enabled': enabled,
+      'label': label,
+      'createdAt': createdAt?.toIso8601String(),
+    };
+  }
 }
