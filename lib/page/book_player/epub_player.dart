@@ -147,6 +147,54 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
       ''');
   }
 
+  void startAutoScroll(int level) {
+    webViewController.evaluateJavascript(source: '''
+      if (typeof window.startAutoScroll === 'function') {
+        window.startAutoScroll($level);
+      }
+    ''');
+  }
+
+  void stopAutoScroll() {
+    webViewController.evaluateJavascript(source: '''
+      if (typeof window.stopAutoScroll === 'function') {
+        window.stopAutoScroll();
+      }
+    ''');
+  }
+
+  void pauseAutoScroll() {
+    webViewController.evaluateJavascript(source: '''
+      if (typeof window.pauseAutoScroll === 'function') {
+        window.pauseAutoScroll();
+      }
+    ''');
+  }
+
+  void resumeAutoScroll() {
+    webViewController.evaluateJavascript(source: '''
+      if (typeof window.resumeAutoScroll === 'function') {
+        window.resumeAutoScroll();
+      }
+    ''');
+  }
+
+  void toggleAutoScrollPause() {
+    webViewController.evaluateJavascript(source: '''
+      if (typeof window.toggleAutoScrollPause === 'function') {
+        window.toggleAutoScrollPause();
+      }
+    ''');
+  }
+
+  void setAutoScrollSpeed(int level) {
+    webViewController.evaluateJavascript(source: '''
+      if (typeof window.setAutoScrollSpeed === 'function') {
+        window.setAutoScrollSpeed($level);
+      }
+    ''');
+  }
+
   Future<void> goToPercentage(double value) async {
     await webViewController.evaluateJavascript(source: '''
       goToPercent($value); 
@@ -649,6 +697,19 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         handlerName: 'onLoadEnd',
         callback: (args) {
           widget.onLoadEnd();
+        });
+
+    controller.addJavaScriptHandler(
+        handlerName: 'onAutoScrollStateChanged',
+        callback: (args) {
+          if (args.isNotEmpty && args[0] is Map) {
+            final data = Map<String, dynamic>.from(args[0]);
+            readingPageKey.currentState?.updateAutoScrollState(
+              isScrolling: data['isScrolling'] ?? false,
+              isPaused: data['isPaused'] ?? false,
+              speedLevel: data['speedLevel'] ?? 5,
+            );
+          }
         });
 
     controller.addJavaScriptHandler(

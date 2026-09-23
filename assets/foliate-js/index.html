@@ -85,11 +85,13 @@
       if (shouldUseModernBundle) {
         await loadScript('./src/vendor/pdfjs/pdf.js', { async: false, defer: false });
         await loadScript('./src/book.js', { type: 'module' });
+        await loadScript('./autoscroll.js');
         return;
       }
 
       await loadScript('./dist/bundle.js', { type: 'module' });
       await loadScript('./dist/pdf-legacy.js', { async: false, defer: false });
+      await loadScript('./autoscroll.js');
     })();
   })();
 </script>

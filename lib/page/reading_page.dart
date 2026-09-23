@@ -28,6 +28,7 @@ import 'package:anx_reader/models/reading_time.dart';
 import 'package:anx_reader/widgets/reading_page/progress_widget.dart';
 import 'package:anx_reader/widgets/reading_page/tts_fab.dart';
 import 'package:anx_reader/widgets/reading_page/tts_widget.dart';
+import 'package:anx_reader/widgets/reading_page/auto_scroll_overlay.dart';
 import 'package:anx_reader/widgets/reading_page/style_widget.dart';
 import 'package:anx_reader/widgets/reading_page/toc_widget.dart';
 import 'package:anx_reader/widgets/common/axis_flex.dart';
@@ -83,6 +84,52 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   late double _aiChatHeight;
   bool _isResizingAiChat = false;
   bool bookmarkExists = false;
+
+  // Auto-scroll state
+  bool _isAutoScrolling = false;
+  bool _isAutoScrollPaused = false;
+  int _autoScrollSpeedLevel = 5;
+
+  void updateAutoScrollState({
+    required bool isScrolling,
+    required bool isPaused,
+    required int speedLevel,
+  }) {
+    setState(() {
+      _isAutoScrolling = isScrolling;
+      _isAutoScrollPaused = isPaused;
+      _autoScrollSpeedLevel = speedLevel;
+    });
+  }
+
+  void startAutoScroll([int? speed]) {
+    final level = speed ?? _autoScrollSpeedLevel;
+    epubPlayerKey.currentState?.startAutoScroll(level);
+    setState(() {
+      _isAutoScrolling = true;
+      _isAutoScrollPaused = false;
+      _autoScrollSpeedLevel = level;
+    });
+  }
+
+  void stopAutoScroll() {
+    epubPlayerKey.currentState?.stopAutoScroll();
+    setState(() {
+      _isAutoScrolling = false;
+      _isAutoScrollPaused = false;
+    });
+  }
+
+  void toggleAutoScrollPause() {
+    epubPlayerKey.currentState?.toggleAutoScrollPause();
+  }
+
+  void setAutoScrollSpeed(int speed) {
+    epubPlayerKey.currentState?.setAutoScrollSpeed(speed);
+    setState(() {
+      _autoScrollSpeedLevel = speed;
+    });
+  }
 
   late final FocusNode _readerFocusNode;
   // late final VolumeKeyBoard _volumeKeyBoard;
@@ -1020,6 +1067,22 @@ class ReadingPageState extends ConsumerState<ReadingPage>
                       right: 16,
                       bottom: 24,
                       child: TtsFab(),
+                    ),
+                  if (_isAutoScrolling)
+                    Positioned(
+                      bottom: 30,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: AutoScrollOverlay(
+                          isScrolling: _isAutoScrolling,
+                          isPaused: _isAutoScrollPaused,
+                          speedLevel: _autoScrollSpeedLevel,
+                          onTogglePause: toggleAutoScrollPause,
+                          onSpeedChanged: setAutoScrollSpeed,
+                          onStop: stopAutoScroll,
+                        ),
+                      ),
                     ),
                 ],
               ),

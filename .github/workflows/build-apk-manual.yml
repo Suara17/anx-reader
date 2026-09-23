@@ -1,0 +1,79 @@
+name: Build APK Manual
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - '**'
+    paths-ignore:
+      - '**.md'
+      - '.github/workflows/!(build-apk-manual.yml)'
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read Flutter version
+        id: flutter_version
+        run: |
+          VERSION=$(tr -d '[:space:]' < .github/flutter-version)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Flutter version: ${VERSION}"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ steps.flutter_version.outputs.version }}
+          cache: true
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+          check-latest: true
+
+      - name: Get Dependencies
+        run: |
+          flutter --version
+          flutter pub get
+
+      - name: Generate Code & Localization
+        run: |
+          flutter gen-l10n
+          dart run build_runner build --delete-conflicting-outputs
+
+      - name: Create Debug Keystore for Release Fallback
+        run: |
+          mkdir -p android/app
+          if [ ! -f android/key.properties ]; then
+            echo "Creating dummy keystore for CI build..."
+            keytool -genkey -v -keystore android/app/ci-release.jks -alias ci -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=CI, OU=CI, O=CI, L=CI, S=CI, C=US"
+            echo "storePassword=123456" > android/key.properties
+            echo "keyPassword=123456" >> android/key.properties
+            echo "keyAlias=ci" >> android/key.properties
+            echo "storeFile=ci-release.jks" >> android/key.properties
+          fi
+
+      - name: Build APK (Universal & Split ABI)
+        run: |
+          flutter build apk --release
+          flutter build apk --split-per-abi --release
+
+      - name: Upload APK Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: anx-reader-apks
+          path: build/app/outputs/flutter-apk/*.apk
+          if-no-files-found: error

@@ -70,6 +70,29 @@ class StyleWidgetState extends State<StyleWidget> {
           sliders(),
           const SizedBox(height: 10),
           fontAndPageTurn(),
+          if (Prefs().pageTurnStyle == PageTurn.scroll) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    icon: const Icon(Icons.motion_photos_auto_rounded),
+                    label: const Text('启动自动滚动翻页'),
+                    onPressed: () {
+                      widget.hideAppBarAndBottomBar(true);
+                      readingPageKey.currentState?.startAutoScroll();
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
           const Divider(),
           Row(
             children: [
