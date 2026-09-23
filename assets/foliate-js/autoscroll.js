@@ -19,7 +19,7 @@
 
     function getScrollTarget() {
     try {
-      // Method 1: reader.view.renderer shadowRoot #container
+      // Priority 1: reader.view.renderer shadowRoot #container
       const r = (typeof reader !== 'undefined' && reader) || globalThis.reader;
       const renderer = r?.view?.renderer;
       if (renderer) {
@@ -36,7 +36,7 @@
         }
       }
 
-      // Method 2: foliate-view elements directly in DOM
+      // Priority 2: foliate-view elements directly in DOM
       const views = document.querySelectorAll('foliate-view');
       for (const v of views) {
         if (v.shadowRoot) {
@@ -57,7 +57,7 @@
         }
       }
 
-      // Method 3: direct foliate-paginator
+      // Priority 3: direct foliate-paginator in DOM or document
       const paginators = document.querySelectorAll('foliate-paginator');
       for (const p of paginators) {
         if (p.shadowRoot) {
@@ -75,7 +75,25 @@
         }
       }
 
-      // Method 4: fallback to document scrollingElement
+      // Priority 4: Look into document iframes (if section is inside an iframe with scrolling)
+      for (const iframe of document.querySelectorAll('iframe')) {
+        try {
+          const idoc = iframe.contentDocument || iframe.contentWindow?.document;
+          if (idoc && idoc.scrollingElement && idoc.scrollingElement.scrollHeight > idoc.documentElement.clientHeight) {
+            const el = idoc.scrollingElement;
+            return {
+              container: el,
+              renderer: null,
+              scroll: (delta) => {
+                el.scrollTop += delta;
+              },
+              getScrollTop: () => el.scrollTop,
+            };
+          }
+        } catch (e) {}
+      }
+
+      // Priority 5: fallback to document scrollingElement
       if (document.scrollingElement && document.scrollingElement.scrollHeight > window.innerHeight) {
         const el = document.scrollingElement;
         return {
@@ -105,7 +123,12 @@
     } catch (e) {}
   }
 
+  let isPageTurning = false;
+  let pageTurnCooldown = 0;
+
   function triggerNextPage() {
+    if (isPageTurning) return;
+    isPageTurning = true;
     try {
       if (typeof window.nextPage === 'function') {
         window.nextPage();
@@ -120,6 +143,12 @@
     } catch (e) {
       console.warn('[AutoScroll] Error calling next page:', e);
     }
+    // Give Foliate 800ms to load new section and reset scroll before detecting next boundary
+    setTimeout(() => {
+      isPageTurning = false;
+      accumulatedDelta = 0;
+      lastTimestamp = null;
+    }, 800);
   }
 
   function step(timestamp) {
