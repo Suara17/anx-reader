@@ -17,8 +17,9 @@
     return minSpeed + (maxSpeed - minSpeed) * ((clamped - 1) / 9.0);
   }
 
-  function getScrollTarget() {
+    function getScrollTarget() {
     try {
+      // Method 1: reader.view.renderer shadowRoot #container
       const r = (typeof reader !== 'undefined' && reader) || globalThis.reader;
       const renderer = r?.view?.renderer;
       if (renderer) {
@@ -28,11 +29,7 @@
             container: container,
             renderer: renderer,
             scroll: (delta) => {
-              if (typeof renderer.scrollBy === 'function') {
-                renderer.scrollBy(0, delta);
-              } else {
-                container.scrollTop += delta;
-              }
+              container.scrollTop += delta;
             },
             getScrollTop: () => container.scrollTop,
           };
@@ -51,11 +48,7 @@
                 container: c,
                 renderer: p,
                 scroll: (delta) => {
-                  if (typeof p.scrollBy === 'function') {
-                    p.scrollBy(0, delta);
-                  } else {
-                    c.scrollTop += delta;
-                  }
+                  c.scrollTop += delta;
                 },
                 getScrollTop: () => c.scrollTop,
               };
@@ -74,11 +67,7 @@
               container: c,
               renderer: p,
               scroll: (delta) => {
-                if (typeof p.scrollBy === 'function') {
-                  p.scrollBy(0, delta);
-                } else {
-                  c.scrollTop += delta;
-                }
+                c.scrollTop += delta;
               },
               getScrollTop: () => c.scrollTop,
             };

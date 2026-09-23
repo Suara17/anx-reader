@@ -104,6 +104,11 @@ class ReadingPageState extends ConsumerState<ReadingPage>
 
   void startAutoScroll([int? speed]) {
     final level = speed ?? _autoScrollSpeedLevel;
+    // 如果当前不是滚动模式，自动切换为连续滚动模式
+    if (Prefs().pageTurnStyle != PageTurn.scroll) {
+      Prefs().pageTurnStyle = PageTurn.scroll;
+      epubPlayerKey.currentState?.changePageTurnStyle(PageTurn.scroll);
+    }
     epubPlayerKey.currentState?.startAutoScroll(level);
     setState(() {
       _isAutoScrolling = true;
