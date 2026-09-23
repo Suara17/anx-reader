@@ -38,12 +38,16 @@ class AiChatStream extends ConsumerStatefulWidget {
     this.sendImmediate = false,
     this.quickPromptChips = const [],
     this.trailing,
+    this.bookId,
+    this.bookTitle,
   });
 
   final String? initialMessage;
   final bool sendImmediate;
   final List<AiQuickPromptChip> quickPromptChips;
   final List<Widget>? trailing;
+  final int? bookId;
+  final String? bookTitle;
 
   @override
   ConsumerState<AiChatStream> createState() => AiChatStreamState();
@@ -60,6 +64,9 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   late List<String> _suggestedPrompts;
   late List<String> _starterPrompts;
   double _fontSize = 14.0;
+
+  bool _userScrolledUp = false;
+  bool _showOnlyCurrentBook = true;
 
   List<Map<String, String>> _getQuickPrompts(BuildContext context) {
     return [
@@ -106,10 +113,25 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     _fontSize = Prefs().aiChatFontSize;
     inputController.text = widget.initialMessage ?? '';
     _suggestedPrompts = _pickSuggestedPrompts();
+    _scrollController.addListener(() {
+      if (!_scrollController.hasClients) return;
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      final currentScroll = _scrollController.offset;
+      // If user scrolled up more than 80px from bottom, stop auto-scrolling
+      if (maxScroll - currentScroll > 80) {
+        if (!_userScrolledUp) {
+          _userScrolledUp = true;
+        }
+      } else {
+        if (_userScrolledUp) {
+          _userScrolledUp = false;
+        }
+      }
+    });
     if (widget.sendImmediate) {
       _sendMessage();
     }
-    _scrollToBottom();
+    _scrollToBottom(force: true);
   }
 
   @override
@@ -158,12 +180,13 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     return prompts.take(3).toList(growable: false);
   }
 
-  void _scrollToBottom() {
+  void _scrollToBottom({bool force = false}) {
+    if (!force && _userScrolledUp) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 250),
           curve: Curves.easeOut,
         );
       }
@@ -179,12 +202,56 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
             title: Text(L10n.of(context).conversationHistory),
             trailing: DeleteConfirm(
               delete: () => _confirmClearHistory(context),
-              deleteIcon: Icon(Icons.delete_sweep),
+              deleteIcon: const Icon(Icons.delete_sweep),
             ),
           ),
+          if (widget.bookId != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SegmentedButton<bool>(
+                      segments: [
+                        ButtonSegment<bool>(
+                          value: true,
+                          icon: const Icon(Icons.book_outlined, size: 16),
+                          label: Text(
+                            widget.bookTitle != null && widget.bookTitle!.isNotEmpty
+                                ? widget.bookTitle!
+                                : '当前书籍',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                        const ButtonSegment<bool>(
+                          value: false,
+                          icon: Icon(Icons.all_inclusive, size: 16),
+                          label: Text('全部'),
+                        ),
+                      ],
+                      selected: {_showOnlyCurrentBook},
+                      onSelectionChanged: (Set<bool> newSelection) {
+                        setState(() {
+                          _showOnlyCurrentBook = newSelection.first;
+                        });
+                      },
+                      style: SegmentedButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: historyState.when(
-              data: (items) {
+              data: (allItems) {
+                final items = (widget.bookId != null && _showOnlyCurrentBook)
+                    ? allItems.where((e) => e.bookId == widget.bookId).toList()
+                    : allItems;
+
                 if (items.isEmpty) {
                   return Center(
                     child: Text(L10n.of(context).noConversationTip),
@@ -220,45 +287,75 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final subtitle = _buildHistorySubtitle(provider, entry);
 
     return FilledContainer(
-      margin: EdgeInsets.symmetric(horizontal: 8),
-      padding: EdgeInsets.all(8),
-      radius: 15,
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.all(10),
+      radius: 14,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: () => _handleHistoryTap(context, entry),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (entry.bookTitle != null && entry.bookTitle!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.book_outlined,
+                      size: 13,
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        entry.bookTitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Text(
               title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w500),
             ),
+            const SizedBox(height: 4),
             Row(
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelMedium,
-                    ),
-                    Text(
-                      _formatTimestamp(entry.updatedAt),
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                      ),
+                      Text(
+                        _formatTimestamp(entry.updatedAt),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.8),
+                            ),
+                      ),
+                    ],
+                  ),
                 ),
-                Spacer(),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.circle, size: 10, color: statusColor),
-                    DeleteConfirm(
-                        delete: () => _confirmDeleteHistory(context, entry)),
-                  ],
+                Icon(Icons.circle, size: 8, color: statusColor),
+                const SizedBox(width: 6),
+                DeleteConfirm(
+                  delete: () => _confirmDeleteHistory(context, entry),
                 ),
               ],
             ),
@@ -379,13 +476,18 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           message,
           ref,
           isRegenerate,
+          bookId: widget.bookId,
+          bookTitle: widget.bookTitle,
         );
 
+    _userScrolledUp = false;
     setState(() {
       _messageController = controller;
       _messageStream = controller.stream;
       _isStreaming = true;
     });
+
+    _scrollToBottom(force: true);
 
     _messageSubscription = stream.listen(
       (event) {
@@ -596,112 +698,172 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
           );
         }).toList(growable: false);
       },
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (_providerLogo(currentProvider) != null)
-            _providerLogo(currentProvider)!,
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              currentProvider != null
-                  ? () {
-                      final label = _modelLabel(currentProvider);
-                      return label.isNotEmpty
-                          ? '${currentProvider.title} · $label'
-                          : currentProvider.title;
-                    }()
-                  : '',
-              style: Theme.of(context).textTheme.bodySmall,
-              overflow: TextOverflow.ellipsis,
-            ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
           ),
-          const SizedBox(width: 4),
-          const Icon(Icons.expand_more, size: 16),
-        ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_providerLogo(currentProvider) != null)
+              _providerLogo(currentProvider)!
+            else
+              Icon(Icons.smart_toy_outlined, size: 14, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                currentProvider != null
+                    ? () {
+                        final label = _modelLabel(currentProvider);
+                        return label.isNotEmpty
+                            ? '${currentProvider.title} · $label'
+                            : currentProvider.title;
+                      }()
+                    : '',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 3),
+            const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
+          ],
+        ),
       ),
     );
-    Widget inputBox = FilledContainer(
-      padding: const EdgeInsets.all(4),
-      radius: 15,
+
+    Widget inputBox = Container(
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: SafeArea(
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                SizedBox.shrink(),
-                Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    reverse: true,
-                    child: Row(
-                      spacing: 8,
-                      children: quickPrompts.map((prompt) {
-                        return ActionChip(
-                          // labelPadding: EdgeInsets.all(0),
-                          label: Text(prompt['label']!),
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (quickPrompts.isNotEmpty)
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: quickPrompts.map((prompt) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 6.0, bottom: 4.0),
+                        child: ActionChip(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          side: BorderSide(
+                            color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+                          ),
+                          label: Text(
+                            prompt['label']!,
+                            style: const TextStyle(fontSize: 12),
+                          ),
                           onPressed: () => _useQuickPrompt(prompt['prompt']!),
-                        );
-                      }).toList(),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              TextField(
+                controller: inputController,
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: L10n.of(context).aiHintInputPlaceholder,
+                  hintStyle: TextStyle(
+                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.7),
+                    fontSize: 14,
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                ),
+                maxLines: 5,
+                minLines: 1,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _sendMessage(),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Flexible(child: aiService),
+                        if (currentProvider != null) ...[
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: const Icon(Icons.tune_rounded, size: 16),
+                            padding: const EdgeInsets.all(4),
+                            constraints: const BoxConstraints(),
+                            visualDensity: VisualDensity.compact,
+                            tooltip: '调整模型参数/切换',
+                            onPressed: () async {
+                              final selected = await showModelPickerDialog(
+                                context: context,
+                                provider: currentProvider,
+                                currentModel: currentProvider.model,
+                              );
+                              if (selected != null &&
+                                  selected != currentProvider.model) {
+                                ref
+                                    .read(aiProvidersProvider.notifier)
+                                    .updateProvider(
+                                      currentProvider.copyWith(model: selected),
+                                    );
+                              }
+                            },
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                ),
-              ],
-            ),
-            SizedBox(height: 4),
-            TextField(
-              controller: inputController,
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: L10n.of(context).aiHintInputPlaceholder,
-                border: InputBorder.none,
-              ),
-              maxLines: 5,
-              minLines: 1,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _sendMessage(),
-            ),
-            SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      Flexible(child: aiService),
-                      if (currentProvider != null)
-                        IconButton(
-                          icon: const Icon(Icons.tune, size: 16),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () async {
-                            final selected = await showModelPickerDialog(
-                              context: context,
-                              provider: currentProvider,
-                              currentModel: currentProvider.model,
-                            );
-                            if (selected != null &&
-                                selected != currentProvider.model) {
-                              ref
-                                  .read(aiProvidersProvider.notifier)
-                                  .updateProvider(
-                                    currentProvider.copyWith(model: selected),
-                                  );
-                            }
-                          },
-                        ),
-                    ],
+                  Container(
+                    margin: const EdgeInsets.only(left: 8),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isStreaming
+                          ? Theme.of(context).colorScheme.errorContainer
+                          : Theme.of(context).colorScheme.primary,
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        _isStreaming ? Icons.stop_rounded : Icons.arrow_upward_rounded,
+                        size: 20,
+                        color: _isStreaming
+                            ? Theme.of(context).colorScheme.onErrorContainer
+                            : Theme.of(context).colorScheme.onPrimary,
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      constraints: const BoxConstraints(),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: _isStreaming ? _cancelStreaming : _sendMessage,
+                    ),
                   ),
-                ),
-                IconButton(
-                  icon: Icon(_isStreaming ? Icons.stop : Icons.send, size: 18),
-                  onPressed: _isStreaming ? _cancelStreaming : _sendMessage,
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -753,34 +915,81 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
         children: [
           if (widget.quickPromptChips.isEmpty)
             Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    L10n.of(context).tryAQuickPrompt,
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _suggestedPrompts
-                        .map(
-                          (prompt) => GestureDetector(
-                            onLongPress: () => _useQuickPrompt(
-                              prompt,
-                              sendImmediately: true,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 58,
+                      height: 58,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            theme.colorScheme.primaryContainer,
+                            theme.colorScheme.surfaceContainerHighest,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.auto_awesome,
+                        size: 28,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      widget.bookTitle != null && widget.bookTitle!.isNotEmpty
+                          ? '与《${widget.bookTitle}》交流'
+                          : L10n.of(context).tryAQuickPrompt,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '可以提问全书主旨、段落含义或读书心得',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _suggestedPrompts
+                          .map(
+                            (prompt) => GestureDetector(
+                              onLongPress: () => _useQuickPrompt(
+                                prompt,
+                                sendImmediately: true,
+                              ),
+                              child: ActionChip(
+                                elevation: 0,
+                                visualDensity: VisualDensity.compact,
+                                side: BorderSide(
+                                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                ),
+                                label: Text(
+                                  prompt,
+                                  style: TextStyle(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                onPressed: () => _useQuickPrompt(prompt),
+                              ),
                             ),
-                            child: ActionChip(
-                              label: Text(prompt),
-                              onPressed: () => _useQuickPrompt(prompt),
-                            ),
-                          ),
-                        )
-                        .toList(growable: false),
-                  ),
-                ],
+                          )
+                          .toList(growable: false),
+                    ),
+                  ],
+                ),
               ),
             ),
           buildQuickChipColumn(),
@@ -792,20 +1001,39 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
       key: _scaffoldKey,
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: Text(L10n.of(context).aiChat),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              L10n.of(context).aiChat,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            if (widget.bookTitle != null && widget.bookTitle!.isNotEmpty)
+              Text(
+                '《${widget.bookTitle}》',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+          ],
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.insert_drive_file),
+          icon: const Icon(Icons.history_rounded),
           tooltip: L10n.of(context).history,
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit_document),
+            icon: const Icon(Icons.add_comment_outlined),
+            tooltip: '开启新对话',
             onPressed: _clearMessage,
           ),
           Builder(
             builder: (context) => IconButton(
-              icon: const Icon(Icons.more_vert),
+              icon: const Icon(Icons.format_size_rounded),
+              tooltip: '调整字号',
               onPressed: () => _showFontSizeMenu(context),
             ),
           ),
@@ -929,64 +1157,117 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     int index,
     bool isStreaming,
   ) {
+    final theme = Theme.of(context);
     final isUser = message is HumanChatMessage;
     final content = chatMessageDisplayContent(message);
     final parsed = parseReasoningContent(content);
     final isLongMessage = content.length > 300;
     final lastAssistantMessage = _getLastAssistantMessage();
 
+    final userBgColor = theme.colorScheme.primaryContainer;
+    final userTextColor = theme.colorScheme.onPrimaryContainer;
+    final assistantBgColor = theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.55);
+
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: 8.0,
-        left: isUser ? 8.0 : 0,
-        right: isUser ? 0 : 8.0,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 10.0),
       child: Row(
         mainAxisAlignment:
             isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(width: 8),
+          if (!isUser) ...[
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
+              child: Icon(
+                Icons.auto_awesome,
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
           Flexible(
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: isUser
-                    ? Theme.of(context).colorScheme.surfaceContainer
-                    : Theme.of(context).colorScheme.surface,
+                color: isUser ? userBgColor : assistantBgColor,
                 borderRadius: BorderRadius.only(
-                  topLeft: isUser ? const Radius.circular(12) : Radius.zero,
-                  topRight: isUser ? Radius.zero : const Radius.circular(12),
-                  bottomLeft: isUser ? Radius.zero : const Radius.circular(12),
-                  bottomRight: isUser ? const Radius.circular(12) : Radius.zero,
+                  topLeft: const Radius.circular(18),
+                  topRight: const Radius.circular(18),
+                  bottomLeft: Radius.circular(isUser ? 18 : 4),
+                  bottomRight: Radius.circular(isUser ? 4 : 18),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   isUser
-                      ? _buildCollapsibleText(content, isLongMessage)
+                      ? DefaultTextStyle(
+                          style: (theme.textTheme.bodyMedium ?? const TextStyle()).copyWith(
+                            color: userTextColor,
+                            fontSize: _fontSize,
+                          ),
+                          child: _buildCollapsibleText(content, isLongMessage),
+                        )
                       : _buildAssistantTimeline(parsed, isStreaming),
                   if (!isUser)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        if (identical(message, lastAssistantMessage))
-                          TextButton(
-                            onPressed: _regenerateLastMessage,
-                            child: Text(L10n.of(context).aiRegenerate),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          if (identical(message, lastAssistantMessage))
+                            TextButton.icon(
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                              ),
+                              icon: const Icon(Icons.refresh, size: 14),
+                              onPressed: _regenerateLastMessage,
+                              label: Text(
+                                L10n.of(context).aiRegenerate,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          TextButton.icon(
+                            style: TextButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                            ),
+                            icon: const Icon(Icons.copy_rounded, size: 14),
+                            onPressed: () => _copyMessageContent(content),
+                            label: Text(
+                              L10n.of(context).commonCopy,
+                              style: const TextStyle(fontSize: 12),
+                            ),
                           ),
-                        TextButton(
-                          onPressed: () => _copyMessageContent(content),
-                          child: Text(L10n.of(context).commonCopy),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                 ],
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          if (isUser) ...[
+            const SizedBox(width: 8),
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.85),
+              child: Icon(
+                Icons.person,
+                size: 16,
+                color: theme.colorScheme.onPrimary,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1054,6 +1335,7 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
     final answerWidgets = _buildTimelineWidgets(
       parsed.answerTimeline,
       fontSize: _fontSize,
+      isStreaming: isStreaming,
     );
     final widgets = <Widget>[];
 
@@ -1078,16 +1360,21 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
   List<Widget> _buildTimelineWidgets(
     List<ParsedReasoningEntry> timeline, {
     required double fontSize,
+    bool isStreaming = false,
   }) {
     final widgets = <Widget>[];
     for (var i = 0; i < timeline.length; i++) {
       final entry = timeline[i];
+      final isLastEntry = i == timeline.length - 1;
       switch (entry.type) {
         case ParsedReasoningEntryType.reply:
           if (entry.text != null && entry.text!.trim().isNotEmpty) {
+            final displayText = (isStreaming && isLastEntry)
+                ? '${entry.text} ▌'
+                : entry.text!;
             widgets.add(
               StyledMarkdown(
-                data: entry.text!,
+                data: displayText,
                 selectable: true,
                 fontSize: fontSize,
               ),

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:anx_reader/config/shared_preference_provider.dart';
+import 'package:anx_reader/utils/get_path/get_base_path.dart';
 import 'package:anx_reader/utils/get_path/get_cache_dir.dart';
 import 'package:langchain_core/chat_models.dart';
 
@@ -14,6 +15,8 @@ class AiChatHistoryEntry {
     required this.updatedAt,
     required this.messages,
     required this.completed,
+    this.bookId,
+    this.bookTitle,
   });
 
   final String id;
@@ -23,12 +26,16 @@ class AiChatHistoryEntry {
   final int updatedAt;
   final List<ChatMessage> messages;
   final bool completed;
+  final int? bookId;
+  final String? bookTitle;
 
   AiChatHistoryEntry copyWith({
     List<ChatMessage>? messages,
     int? updatedAt,
     bool? completed,
     String? model,
+    int? bookId,
+    String? bookTitle,
   }) {
     return AiChatHistoryEntry(
       id: id,
@@ -38,6 +45,8 @@ class AiChatHistoryEntry {
       updatedAt: updatedAt ?? this.updatedAt,
       messages: messages ?? this.messages,
       completed: completed ?? this.completed,
+      bookId: bookId ?? this.bookId,
+      bookTitle: bookTitle ?? this.bookTitle,
     );
   }
 
@@ -49,6 +58,8 @@ class AiChatHistoryEntry {
       'createdAt': createdAt,
       'updatedAt': updatedAt,
       'completed': completed,
+      'bookId': bookId,
+      'bookTitle': bookTitle,
       'messages': messages.map((m) => m.toMap()).toList(growable: false),
     };
   }
@@ -79,6 +90,8 @@ class AiChatHistoryEntry {
           ? json['updatedAt'] as int
           : DateTime.now().millisecondsSinceEpoch,
       completed: json['completed'] == true,
+      bookId: json['bookId'] is int ? json['bookId'] as int : null,
+      bookTitle: json['bookTitle']?.toString(),
       messages: messages,
     );
   }
@@ -153,7 +166,24 @@ class AiHistoryStore {
   }
 
   static Future<File> _resolveFile() async {
-    final cacheDir = await getAnxCacheDir();
-    return File('${cacheDir.path}/$historyFileName');
+    final aiDir = getAiDir();
+    if (!await aiDir.exists()) {
+      await aiDir.create(recursive: true);
+    }
+    final targetFile = File('${aiDir.path}/$historyFileName');
+
+    // Migration from old cache directory if exists
+    if (!await targetFile.exists()) {
+      try {
+        final oldCacheDir = await getAnxCacheDir();
+        final oldFile = File('${oldCacheDir.path}/$historyFileName');
+        if (await oldFile.exists()) {
+          await oldFile.copy(targetFile.path);
+          await oldFile.delete();
+        }
+      } catch (_) {}
+    }
+
+    return targetFile;
   }
 }

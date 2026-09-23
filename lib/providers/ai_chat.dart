@@ -36,8 +36,10 @@ class AiChat extends _$AiChat {
   Stream<List<ChatMessage>> sendMessageStream(
     String message,
     WidgetRef widgetRef,
-    bool isRegenerate,
-  ) async* {
+    bool isRegenerate, {
+    int? bookId,
+    String? bookTitle,
+  }) async* {
     final sessionId = _ensureSessionId();
     final serviceId = Prefs().selectedAiService;
     final config = Prefs().getAiConfig(serviceId);
@@ -76,12 +78,16 @@ class AiChat extends _$AiChat {
               updatedAt: now,
               messages: List<ChatMessage>.from(updatedMessages),
               completed: false,
+              bookId: bookId,
+              bookTitle: bookTitle,
             ))
         .copyWith(
       messages: List<ChatMessage>.from(updatedMessages),
       updatedAt: now,
       completed: false,
       model: model,
+      bookId: bookId ?? entry?.bookId,
+      bookTitle: bookTitle ?? entry?.bookTitle,
     );
 
     await historyNotifier.upsert(draftEntry);

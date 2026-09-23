@@ -107,3 +107,8 @@ Directory getBgimgDir({String? path}) {
   path ??= documentPath;
   return Directory('$path${Platform.pathSeparator}bgimg');
 }
+
+Directory getAiDir({String? path}) {
+  path ??= documentPath;
+  return Directory('$path${Platform.pathSeparator}ai');
+}

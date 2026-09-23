@@ -312,6 +312,7 @@ Future<String> createZipFile(Map<String, dynamic> params) async {
     getCoverDir(path: docPath),
     getFontDir(path: docPath),
     getBgimgDir(path: docPath),
+    getAiDir(path: docPath),
     if (!AnxPlatform.isOhos) await getAnxDataBasesDir(),
     // await getAnxSharedPrefsDir(),
     // await getAnxShredPrefsFile(),
