@@ -913,85 +913,84 @@ class AiChatStreamState extends ConsumerState<AiChatStream> {
 
       return Stack(
         children: [
-          if (widget.quickPromptChips.isEmpty)
-            Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 58,
-                      height: 58,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            theme.colorScheme.primaryContainer,
-                            theme.colorScheme.surfaceContainerHighest,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        shape: BoxShape.circle,
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          theme.colorScheme.primaryContainer,
+                          theme.colorScheme.surfaceContainerHighest,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      child: Icon(
-                        Icons.auto_awesome,
-                        size: 28,
-                        color: theme.colorScheme.primary,
-                      ),
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      widget.bookTitle != null && widget.bookTitle!.isNotEmpty
-                          ? '与《${widget.bookTitle}》交流'
-                          : L10n.of(context).tryAQuickPrompt,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
+                    child: Icon(
+                      Icons.auto_awesome,
+                      size: 28,
+                      color: theme.colorScheme.primary,
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '可以提问全书主旨、段落含义或读书心得',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.outline,
-                      ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    widget.bookTitle != null && widget.bookTitle!.isNotEmpty
+                        ? '与《${widget.bookTitle}》交流'
+                        : L10n.of(context).tryAQuickPrompt,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 20),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _suggestedPrompts
-                          .map(
-                            (prompt) => GestureDetector(
-                              onLongPress: () => _useQuickPrompt(
-                                prompt,
-                                sendImmediately: true,
-                              ),
-                              child: ActionChip(
-                                elevation: 0,
-                                visualDensity: VisualDensity.compact,
-                                side: BorderSide(
-                                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-                                ),
-                                label: Text(
-                                  prompt,
-                                  style: TextStyle(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                onPressed: () => _useQuickPrompt(prompt),
-                              ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '可以提问全书主旨、段落含义或读书心得',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _suggestedPrompts
+                        .map(
+                          (prompt) => GestureDetector(
+                            onLongPress: () => _useQuickPrompt(
+                              prompt,
+                              sendImmediately: true,
                             ),
-                          )
-                          .toList(growable: false),
-                    ),
-                  ],
-                ),
+                            child: ActionChip(
+                              elevation: 0,
+                              visualDensity: VisualDensity.compact,
+                              side: BorderSide(
+                                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                              ),
+                              label: Text(
+                                prompt,
+                                style: TextStyle(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              onPressed: () => _useQuickPrompt(prompt),
+                            ),
+                          ),
+                        )
+                        .toList(growable: false),
+                  ),
+                ],
               ),
             ),
+          ),
           buildQuickChipColumn(),
         ],
       );

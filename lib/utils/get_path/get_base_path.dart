@@ -68,6 +68,7 @@ void initBasePath() async {
   final coverDir = getCoverDir();
   final fontDir = getFontDir();
   final bgimgDir = getBgimgDir();
+  final aiDir = getAiDir();
   if (!fileDir.existsSync()) {
     fileDir.createSync(recursive: true);
   }
@@ -79,6 +80,9 @@ void initBasePath() async {
   }
   if (!bgimgDir.existsSync()) {
     bgimgDir.createSync(recursive: true);
+  }
+  if (!aiDir.existsSync()) {
+    aiDir.createSync(recursive: true);
   }
 }
 

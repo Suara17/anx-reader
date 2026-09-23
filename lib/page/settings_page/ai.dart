@@ -339,7 +339,7 @@ class _AISettingsState extends ConsumerState<AISettings> {
   // Build description showing current selected provider
   Widget? _buildProviderDescription() {
     final provider =
-        ref.read(aiProvidersProvider.notifier).getSelectedProvider();
+        ref.watch(aiProvidersProvider.notifier).getSelectedProvider();
     if (provider == null) {
       return null;
     }
