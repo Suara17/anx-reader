@@ -88,7 +88,7 @@ class ReadingPageState extends ConsumerState<ReadingPage>
   // Auto-scroll state
   bool _isAutoScrolling = false;
   bool _isAutoScrollPaused = false;
-  int _autoScrollSpeedLevel = 5;
+  int _autoScrollSpeedLevel = 2;
 
   void updateAutoScrollState({
     required bool isScrolling,

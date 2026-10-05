@@ -5,7 +5,7 @@
   let isTouching = false;
   let resumeTimer = null;
   let animFrameId = null;
-  let speedLevel = 5; // 1 - 10
+  let speedLevel = 2; // 1 - 10
   let lastTimestamp = null;
   let accumulatedDelta = 0;
 
