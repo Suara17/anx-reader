@@ -11,6 +11,7 @@ import 'package:anx_reader/service/tts/tts_service.dart';
 import 'package:anx_reader/service/tts/tts_service_provider.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/widgets.dart';
+import 'package:http/http.dart' as http;
 
 /// Microsoft Edge online neural TTS provider.
 ///
@@ -28,6 +29,7 @@ class EdgeTtsProvider extends TtsServiceProvider {
 
   static const String _trustedClientToken = '6A5AA1D4EAFF4E9FB37E23D68491D6F4';
   static const String _chromiumVersion = '143.0.3650.75';
+  static const String _chromiumMajor = '143';
   static const String _secMsGecVersion = '1-$_chromiumVersion';
   static const String _wssUrl =
       'wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1';
@@ -73,6 +75,7 @@ class EdgeTtsProvider extends TtsServiceProvider {
   Future<Uint8List> speak(
       String text, String? voice, double rate, double pitch) async {
     final String resolvedVoice = resolveVoice(voice);
+    await _syncClockSkew();
     final String url = _buildUrl();
     final BytesBuilder audioBuffer = BytesBuilder(copy: false);
     final Completer<Uint8List> completer = Completer<Uint8List>();
@@ -266,6 +269,35 @@ class EdgeTtsProvider extends TtsServiceProvider {
   // Helpers
   // ---------------------------------------------------------------------------
 
+  /// Cached offset between the local clock and Microsoft's server clock.
+  /// A skewed clock makes the `Sec-MS-GEC` token invalid and yields HTTP 403.
+  double _clockSkewSeconds = 0.0;
+  bool _clockSynced = false;
+
+  /// Fetch the server `Date` header once to correct local clock skew.
+  Future<void> _syncClockSkew() async {
+    if (_clockSynced) return;
+    _clockSynced = true;
+    try {
+      final http.Response resp = await http.get(
+        Uri.parse(
+            'https://speech.platform.bing.com/consumer/speech/synthesize/'
+            'readaloud/voices/list?trustedclienttoken=$_trustedClientToken'),
+        headers: _requestHeaders(),
+      ).timeout(const Duration(seconds: 10));
+      final String? dateStr = resp.headers['date'];
+      if (dateStr != null) {
+        final DateTime serverTime = HttpDate.parse(dateStr).toUtc();
+        final DateTime clientTime = DateTime.now().toUtc();
+        _clockSkewSeconds =
+            serverTime.difference(clientTime).inMilliseconds / 1000.0;
+      }
+    } catch (_) {
+      // Best effort only; fall back to the local clock.
+      _clockSynced = false;
+    }
+  }
+
   String _buildUrl() {
     final String secMsGec = _generateSecMsGec();
     final String connectionId = _randomHex(16);
@@ -277,16 +309,18 @@ class EdgeTtsProvider extends TtsServiceProvider {
   }
 
   Map<String, dynamic> _requestHeaders() {
+    final String muid = _randomHex(16).toUpperCase();
     return {
       'Pragma': 'no-cache',
       'Cache-Control': 'no-cache',
       'Origin': 'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
-      'Accept-Encoding': 'gzip, deflate, br',
+      'Accept-Encoding': 'gzip, deflate, br, zstd',
       'Accept-Language': 'en-US,en;q=0.9',
+      'Cookie': 'muid=$muid;',
       'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-              '(KHTML, like Gecko) Chrome/$_chromiumVersion Safari/537.36 '
-              'Edg/$_chromiumVersion',
+              '(KHTML, like Gecko) Chrome/$_chromiumMajor.0.0.0 Safari/537.36 '
+              'Edg/$_chromiumMajor.0.0.0',
     };
   }
 
@@ -299,6 +333,7 @@ class EdgeTtsProvider extends TtsServiceProvider {
     const int winEpochSeconds = 11644473600; // 1601-01-01 -> 1970-01-01
     double ticks =
         DateTime.now().millisecondsSinceEpoch / 1000.0 + winEpochSeconds;
+    ticks += _clockSkewSeconds;
     ticks -= ticks % 300; // round down to nearest 5 minutes
     final int ticksInt = (ticks * 10000000).round();
     final String strToHash = '$ticksInt$_trustedClientToken';
