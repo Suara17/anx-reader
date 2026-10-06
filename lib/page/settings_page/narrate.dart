@@ -444,6 +444,9 @@ class _NarrateSettingsState extends ConsumerState<NarrateSettings>
           DropdownMenuItem(
               value: 'openai',
               child: Text(L10n.of(context).settingsNarrateOpenAiTts)),
+          DropdownMenuItem(
+              value: 'edge',
+              child: Text(L10n.of(context).settingsNarrateEdgeTts)),
         ],
         onChanged: (value) async {
           if (value != null && value != currentServiceId) {

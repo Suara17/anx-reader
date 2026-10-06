@@ -834,6 +834,8 @@
   "settingsNarrateAzureTts": "Microsoft Azure",
   "settingsNarrateOpenAiTts": "OpenAI",
   "settingsNarrateSystemTts": "System TTS",
+  "settingsNarrateEdgeTts": "Microsoft Edge TTS",
+  "settingsNarrateEdgeHelpText": "Uses Microsoft Edge online neural voices without an API key. Includes high quality voices such as Xiaoxiao, Yunxi, and Yunyang.",
   "settingsNarrateTtsVoiceModels": "TTS Voice Models",
   "settingsNarrateGetVoiceList": "Get Voice List",
   "settingsNarrateNoVoicesFound": "No voices found. Check your configuration.",

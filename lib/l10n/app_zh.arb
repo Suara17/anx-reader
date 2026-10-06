@@ -800,6 +800,8 @@
   "settingsNarrateAzureTts": "微软 Azure",
   "settingsNarrateOpenAiTts": "OpenAI",
   "settingsNarrateSystemTts": "系统 TTS",
+  "settingsNarrateEdgeTts": "微软 Edge 语音",
+  "settingsNarrateEdgeHelpText": "使用微软 Edge 在线神经语音，无需 API Key。内置晓晓、云希、云扬等多种高自然度中文音色。",
   "settingsNarrateTtsVoiceModels": "TTS 语音模型",
   "settingsNarrateGetVoiceList": "获取语音列表",
   "settingsNarrateNoVoicesFound": "未找到语音。请检查您的配置。",
