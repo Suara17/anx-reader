@@ -308,7 +308,7 @@ class EdgeTtsProvider extends TtsServiceProvider {
         '\u0026ConnectionId=$connectionId';
   }
 
-  Map<String, dynamic> _requestHeaders() {
+  Map<String, String> _requestHeaders() {
     final String muid = _randomHex(16).toUpperCase();
     return {
       'Pragma': 'no-cache',
