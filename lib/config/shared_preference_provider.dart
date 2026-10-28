@@ -1579,6 +1579,15 @@ class Prefs extends ChangeNotifier {
     return prefs.getBool('customCSSEnabled') ?? false;
   }
 
+  set eInkPaperMode(bool enabled) {
+    prefs.setBool('eInkPaperMode', enabled);
+    notifyListeners();
+  }
+
+  bool get eInkPaperMode {
+    return prefs.getBool('eInkPaperMode') ?? false;
+  }
+
   set customCSS(String css) {
     prefs.setString('customCSS', css);
     notifyListeners();

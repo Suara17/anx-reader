@@ -29,8 +29,14 @@ String generateUrl(
   backgroundColor ??= readTheme.backgroundColor;
   importing ??= false;
 
-  textColor = convertDartColorToJs(textColor);
-  backgroundColor = convertDartColorToJs(backgroundColor);
+  final bool isEInk = Prefs().eInkPaperMode;
+  if (isEInk) {
+    textColor = '111111';
+    backgroundColor = 'e7e8e5';
+  } else {
+    textColor = convertDartColorToJs(textColor);
+    backgroundColor = convertDartColorToJs(backgroundColor);
+  }
 
   // Get effective background image URL using the new method
   String bgimgUrl = Prefs().bgimg.getEffectiveUrl(
@@ -93,6 +99,7 @@ String generateUrl(
     'allowScript': Prefs().enableJsForEpub,
     'customCSS': Prefs().customCSS,
     'customCSSEnabled': Prefs().customCSSEnabled,
+    'eInkPaperMode': isEInk,
     'useBookStyles': Prefs().useBookStyles,
     'headingFontSize': bookStyle.headingFontSize,
     'codeHighlightTheme': Prefs().codeHighlightTheme.code,

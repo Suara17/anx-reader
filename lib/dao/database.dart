@@ -61,6 +61,9 @@ INSERT INTO tb_themes (background_color, text_color, background_image_path) VALU
 const primaryTheme2 = '''
 INSERT INTO tb_themes (background_color, text_color, background_image_path) VALUES ('ff040404', 'fffeffeb', '')
 ''';
+const primaryTheme3 = '''
+INSERT INTO tb_themes (background_color, text_color, background_image_path) VALUES ('ffe7e8e5', 'ff111111', '')
+''';
 
 const createNoteSQL = '''
 CREATE TABLE tb_notes (
@@ -325,6 +328,7 @@ class DBHelper {
         await db.execute(createReadingTimeSQL);
         await db.execute(primaryTheme1);
         await db.execute(primaryTheme2);
+        await db.execute(primaryTheme3);
         continue case1;
       case1:
       case 1:

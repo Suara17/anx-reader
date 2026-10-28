@@ -68,6 +68,24 @@ class StyleSettings extends StatefulWidget {
 class _StyleSettingsState extends State<StyleSettings> {
   @override
   Widget build(BuildContext context) {
+    Widget eInkPaperModeSwitch() {
+      return SwitchListTile(
+        secondary: const Icon(Icons.chrome_reader_mode_outlined),
+        title: Text(L10n.of(context).readingPageEInkPaperMode),
+        subtitle: Text(
+          L10n.of(context).readingPageEInkPaperModeHint,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        value: Prefs().eInkPaperMode,
+        onChanged: (bool value) {
+          setState(() {
+            Prefs().eInkPaperMode = value;
+            epubPlayerKey.currentState?.changeStyle(Prefs().bookStyle);
+          });
+        },
+      );
+    }
+
     Widget useBookStylesSwitch() {
       return SwitchListTile(
         title: Text(L10n.of(context).useBookStyles),
@@ -337,6 +355,8 @@ class _StyleSettingsState extends State<StyleSettings> {
       padding: const EdgeInsets.all(8.0),
       child: Column(
         children: [
+          eInkPaperModeSwitch(),
+          const Divider(),
           useBookStylesSwitch(),
           const Divider(),
           sliders(),

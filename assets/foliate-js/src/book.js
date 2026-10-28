@@ -701,6 +701,7 @@ const getCSS = ({ fontSize,
   flow,
   customCSS,
   customCSSEnabled,
+  eInkPaperMode,
   useBookStyles,
   headingFontSize,
   codeHighlightTheme
@@ -716,6 +717,61 @@ const getCSS = ({ fontSize,
   // controls apply consistently across the whole reading surface.
   const backgroundImageCSS = 'background: none !important;'
 
+  const eInkCSS = eInkPaperMode ? `
+    /* === E-Ink Paper Reading Mode (Physical Ink & Paper Simulation) === */
+    html {
+      background-color: #E7E8E5 !important;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.038'/%3E%3C/svg%3E") !important;
+      background-repeat: repeat !important;
+      color: #111111 !important;
+      -webkit-font-smoothing: antialiased !important;
+      text-rendering: optimizeLegibility !important;
+    }
+    body {
+      background: transparent !important;
+      color: #111111 !important;
+      -webkit-font-smoothing: antialiased !important;
+      text-rendering: optimizeLegibility !important;
+    }
+    p, li, blockquote, dd, div, span, font, h1, h2, h3, h4, h5, h6, b, strong, em, i {
+      color: #111111 !important;
+      text-shadow: 0 0 0.5px rgba(17, 17, 17, 0.65) !important;
+      -webkit-font-smoothing: antialiased !important;
+      text-rendering: optimizeLegibility !important;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      color: #111111 !important;
+      text-shadow: 0 0 0.6px rgba(17, 17, 17, 0.75) !important;
+      letter-spacing: -0.01em !important;
+    }
+    a:link, a:visited {
+      color: #2b333a !important;
+      text-decoration: underline !important;
+      text-decoration-style: dotted !important;
+      text-shadow: 0 0 0.4px rgba(17, 17, 17, 0.5) !important;
+    }
+    blockquote {
+      border-left: 3px solid rgba(17, 17, 17, 0.35) !important;
+      padding-left: 1em !important;
+      margin-left: 0.5em !important;
+      color: #262725 !important;
+      font-style: italic;
+    }
+    hr {
+      border: none !important;
+      border-top: 1px solid rgba(17, 17, 17, 0.22) !important;
+      margin: 1.5em 0 !important;
+    }
+    pre, code {
+      background-color: rgba(0, 0, 0, 0.04) !important;
+      border: 1px dashed rgba(17, 17, 17, 0.2) !important;
+      color: #111111 !important;
+      text-shadow: none !important;
+    }
+    img, svg {
+      filter: contrast(108%) brightness(98%) !important;
+    }
+  ` : ''
 
   // Some CSS selectors are inspired by https://github.com/readest/foliate-js
   return `
@@ -919,6 +975,7 @@ const getCSS = ({ fontSize,
         display: none;
     }
     
+    ${eInkCSS}
     ${customCSSEnabled && customCSS ? customCSS : ''}
 `}
 
@@ -1710,21 +1767,31 @@ const setStyle = (oldStyle) => {
       turn.animated = false
       break
   }
+  const isEInk = Boolean(style.eInkPaperMode)
+  const effectiveBg = isEInk ? '#e7e8e5' : style.backgroundColor
+  const effectiveFont = isEInk ? '#111111' : style.fontColor
 
   reader.view.renderer.setAttribute('flow', turn.scroll ? 'scrolled' : 'paginated')
   reader.view.renderer.setAttribute('top-margin', `${style.topMargin}px`)
   reader.view.renderer.setAttribute('bottom-margin', `${style.bottomMargin}px`)
   reader.view.renderer.setAttribute('gap', `${style.sideMargin}%`)
-  reader.view.renderer.setAttribute('background-color', style.backgroundColor)
+  reader.view.renderer.setAttribute('background-color', effectiveBg)
   reader.view.renderer.setAttribute('max-column-count', style.maxColumnCount)
   reader.view.renderer.setAttribute('column-threshold', `${style.columnThreshold}px`)
-  reader.view.renderer.setAttribute('bgimg-url', style.backgroundImage)
+  reader.view.renderer.setAttribute('bgimg-url', isEInk ? '' : style.backgroundImage)
   reader.view.renderer.setAttribute('bgimg-blur', style.bgimgBlur ?? 0)
   reader.view.renderer.setAttribute('bgimg-opacity', style.bgimgOpacity ?? 1)
   reader.view.renderer.setAttribute('bgimg-fit', style.bgimgFit ?? 'cover')
-
   turn.animated ? reader.view.renderer.setAttribute('animated', 'true')
     : reader.view.renderer.removeAttribute('animated')
+
+  if (isEInk) {
+    document.documentElement.style.backgroundColor = '#e7e8e5'
+    document.body.style.backgroundColor = '#e7e8e5'
+  } else {
+    document.documentElement.style.backgroundColor = ''
+    document.body.style.backgroundColor = ''
+  }
 
   const newStyle = {
     fontSize: style.fontSize,
@@ -1735,16 +1802,17 @@ const setStyle = (oldStyle) => {
     spacing: style.spacing,
     paragraphSpacing: style.paragraphSpacing,
     textIndent: style.textIndent,
-    fontColor: style.fontColor,
-    backgroundColor: style.backgroundColor,
+    fontColor: effectiveFont,
+    backgroundColor: effectiveBg,
     justify: style.justify,
     textAlign: style.textAlign,
     hyphenate: style.hyphenate,
     writingMode: style.writingMode,
-    backgroundImage: style.backgroundImage,
+    backgroundImage: isEInk ? '' : style.backgroundImage,
     flow: turn.scroll,
     customCSS: style.customCSS,
     customCSSEnabled: style.customCSSEnabled,
+    eInkPaperMode: isEInk,
     useBookStyles: style.useBookStyles,
     headingFontSize: style.headingFontSize
   }

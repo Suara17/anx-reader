@@ -218,14 +218,15 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   void changeTheme(ReadTheme readTheme) {
     textColor = readTheme.textColor;
     backgroundColor = readTheme.backgroundColor;
-
-    String bc = convertDartColorToJs(readTheme.backgroundColor);
-    String tc = convertDartColorToJs(readTheme.textColor);
+    final bool isEInk = Prefs().eInkPaperMode;
+    String bc = isEInk ? 'e7e8e5' : convertDartColorToJs(readTheme.backgroundColor);
+    String tc = isEInk ? '111111' : convertDartColorToJs(readTheme.textColor);
 
     webViewController.evaluateJavascript(source: '''
       changeStyle({
         backgroundColor: '#$bc',
         fontColor: '#$tc',
+        eInkPaperMode: $isEInk,
       })
       ''');
   }
@@ -236,10 +237,12 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
           isDarkMode: isDarkMode,
           autoAdjust: Prefs().autoAdjustReadingTheme,
         );
-
     styleTimer = Timer(const Duration(milliseconds: 300), () {
       if (!mounted) return;
       BookStyle style = bookStyle ?? Prefs().bookStyle;
+      final bool isEInk = Prefs().eInkPaperMode;
+      String bc = isEInk ? 'e7e8e5' : convertDartColorToJs(backgroundColor ?? Prefs().readTheme.backgroundColor);
+      String tc = isEInk ? '111111' : convertDartColorToJs(textColor ?? Prefs().readTheme.textColor);
       webViewController.evaluateJavascript(source: '''
       changeStyle({
         fontSize: ${style.fontSize},
@@ -259,8 +262,11 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         bgimgBlur: ${Prefs().bgimg.blur},
         bgimgOpacity: ${Prefs().bgimg.opacity},
         bgimgFit: '${Prefs().bgimgFit.code}',
-        customCSS: `${Prefs().customCSS.replaceAll('`', '\\`')}`,
+        customCSS: `${Prefs().customCSS.replaceAll('`', '\\\\`')}`,
         customCSSEnabled: ${Prefs().customCSSEnabled},
+        eInkPaperMode: $isEInk,
+        backgroundColor: '#$bc',
+        fontColor: '#$tc',
         useBookStyles: ${Prefs().useBookStyles},
         headingFontSize: ${style.headingFontSize},
         codeHighlightTheme: '${Prefs().codeHighlightTheme.code}',
