@@ -707,9 +707,14 @@ const getCSS = ({ fontSize,
   codeHighlightTheme
 }) => {
 
-  const fontFamily = fontName === 'book' ? '' :
-    fontName === 'system' ? 'font-family: system-ui !important;' :
-      `font-family: ${fontName} !important;`
+  const serifFontStack = '"Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", "STSong", "STFangsong", "FZShuSong-Z01S", "FangSong", "Nimbus Roman No9 L", serif'
+  const fontFamily = eInkPaperMode
+    ? (fontName === 'book' || fontName === 'system' || !fontName
+        ? `font-family: ${serifFontStack} !important;`
+        : `font-family: ${fontName}, ${serifFontStack} !important;`)
+    : (fontName === 'book' ? '' :
+        fontName === 'system' ? 'font-family: system-ui !important;' :
+          `font-family: ${fontName} !important;`)
 
   const writingModeCSS = writingMode === 'auto' ? '' : `writing-mode: ${writingMode} !important;`
 
@@ -719,53 +724,63 @@ const getCSS = ({ fontSize,
 
   const eInkCSS = eInkPaperMode ? `
     /* === E-Ink Paper Reading Mode (Physical Ink & Paper Simulation) === */
-    html {
-      background-color: #E7E8E5 !important;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.038'/%3E%3C/svg%3E") !important;
-      background-repeat: repeat !important;
-      color: #111111 !important;
+    html, body {
+      background-color: #e4e5e1 !important;
+      color: #121212 !important;
       -webkit-font-smoothing: antialiased !important;
       text-rendering: optimizeLegibility !important;
     }
-    body {
-      background: transparent !important;
-      color: #111111 !important;
-      -webkit-font-smoothing: antialiased !important;
-      text-rendering: optimizeLegibility !important;
+    body::before {
+      content: "" !important;
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 999999 !important;
+      pointer-events: none !important;
+      opacity: 0.12 !important;
+      mix-blend-mode: multiply !important;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='paperNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23paperNoise)'/%3E%3C/svg%3E") !important;
+      background-repeat: repeat !important;
     }
     p, li, blockquote, dd, div, span, font, h1, h2, h3, h4, h5, h6, b, strong, em, i {
-      color: #111111 !important;
-      text-shadow: 0 0 0.5px rgba(17, 17, 17, 0.65) !important;
+      color: #121212 !important;
+      font-weight: 500 !important;
+      text-shadow: 0 0 0.55px rgba(18, 18, 18, 0.75), 0 0 0.2px rgba(18, 18, 18, 0.9) !important;
       -webkit-font-smoothing: antialiased !important;
       text-rendering: optimizeLegibility !important;
     }
     h1, h2, h3, h4, h5, h6 {
-      color: #111111 !important;
-      text-shadow: 0 0 0.6px rgba(17, 17, 17, 0.75) !important;
+      color: #0b0b0b !important;
+      font-weight: 700 !important;
+      text-shadow: 0 0 0.7px rgba(11, 11, 11, 0.8) !important;
       letter-spacing: -0.01em !important;
     }
     a:link, a:visited {
       color: #2b333a !important;
       text-decoration: underline !important;
       text-decoration-style: dotted !important;
-      text-shadow: 0 0 0.4px rgba(17, 17, 17, 0.5) !important;
+      text-shadow: 0 0 0.4px rgba(18, 18, 18, 0.5) !important;
     }
     blockquote {
-      border-left: 3px solid rgba(17, 17, 17, 0.35) !important;
+      border-left: 3px solid rgba(18, 18, 18, 0.4) !important;
       padding-left: 1em !important;
       margin-left: 0.5em !important;
-      color: #262725 !important;
+      color: #242523 !important;
       font-style: italic;
     }
     hr {
       border: none !important;
-      border-top: 1px solid rgba(17, 17, 17, 0.22) !important;
+      border-top: 1px solid rgba(18, 18, 18, 0.25) !important;
       margin: 1.5em 0 !important;
     }
     pre, code {
       background-color: rgba(0, 0, 0, 0.04) !important;
-      border: 1px dashed rgba(17, 17, 17, 0.2) !important;
-      color: #111111 !important;
+      border: 1px dashed rgba(18, 18, 18, 0.25) !important;
+      color: #121212 !important;
       text-shadow: none !important;
     }
     img, svg {
@@ -781,12 +796,11 @@ const getCSS = ({ fontSize,
       src: url('${fontPath}');
       font-display: swap;
     }
-
     html {
         ${writingModeCSS}
-        color: ${fontColor} !important;
+        color: ${eInkPaperMode ? '#121212' : fontColor} !important;
         ${backgroundImageCSS}
-        background-color: transparent !important;
+        background-color: ${eInkPaperMode ? '#e4e5e1' : 'transparent'} !important;
         ${useBookStyles ? '' : `letter-spacing: ${letterSpacing}px;`}
         ${useBookStyles ? '' : `font-size: ${fontSize}em;`}
         orphans: 1;  
@@ -794,11 +808,10 @@ const getCSS = ({ fontSize,
     }
 
     body {
-        /* Force user writing-mode over EPUB body rules (e.g. vertical-rl in template_rv.css).
-           html alone is not enough: body has its own writing-mode from the book stylesheet. */
+        /* Force user writing-mode over EPUB body rules (e.g. vertical-rl in template_rv.css).\n           html alone is not enough: body has its own writing-mode from the book stylesheet. */
         ${writingModeCSS}
         background: none !important;
-        background-color: transparent;
+        background-color: ${eInkPaperMode ? '#e4e5e1' : 'transparent'} !important;
         padding: 0;
     }
 
@@ -1768,8 +1781,8 @@ const setStyle = (oldStyle) => {
       break
   }
   const isEInk = Boolean(style.eInkPaperMode)
-  const effectiveBg = isEInk ? '#e7e8e5' : style.backgroundColor
-  const effectiveFont = isEInk ? '#111111' : style.fontColor
+  const effectiveBg = isEInk ? '#e4e5e1' : style.backgroundColor
+  const effectiveFont = isEInk ? '#121212' : style.fontColor
 
   reader.view.renderer.setAttribute('flow', turn.scroll ? 'scrolled' : 'paginated')
   reader.view.renderer.setAttribute('top-margin', `${style.topMargin}px`)
@@ -1786,8 +1799,8 @@ const setStyle = (oldStyle) => {
     : reader.view.renderer.removeAttribute('animated')
 
   if (isEInk) {
-    document.documentElement.style.backgroundColor = '#e7e8e5'
-    document.body.style.backgroundColor = '#e7e8e5'
+    document.documentElement.style.backgroundColor = '#e4e5e1'
+    document.body.style.backgroundColor = '#e4e5e1'
   } else {
     document.documentElement.style.backgroundColor = ''
     document.body.style.backgroundColor = ''

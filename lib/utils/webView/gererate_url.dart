@@ -31,8 +31,8 @@ String generateUrl(
 
   final bool isEInk = Prefs().eInkPaperMode;
   if (isEInk) {
-    textColor = '111111';
-    backgroundColor = 'e7e8e5';
+    textColor = '121212';
+    backgroundColor = 'e4e5e1';
   } else {
     textColor = convertDartColorToJs(textColor);
     backgroundColor = convertDartColorToJs(backgroundColor);

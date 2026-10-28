@@ -890,7 +890,7 @@
   "useBookStyles": "Use Book Styles",
   "useBookStylesDescription": "When enabled, the app will use the styling defined in the book instead of your custom settings for line height, font weight, text indent, letter spacing, and paragraph spacing",
   "readingPageEInkPaperMode": "E-Ink Paper Mode",
-  "readingPageEInkPaperModeHint": "Cold grey-white paper, ink black text with micro bleed & paper texture",
+  "readingPageEInkPaperModeHint": "Cold grey-white paper, classic serif font & micro ink bleed texture",
   "historyBack": "Back",
   "historyForward": "Forward", 
   "historyClose": "Close",

@@ -62,7 +62,7 @@ const primaryTheme2 = '''
 INSERT INTO tb_themes (background_color, text_color, background_image_path) VALUES ('ff040404', 'fffeffeb', '')
 ''';
 const primaryTheme3 = '''
-INSERT INTO tb_themes (background_color, text_color, background_image_path) VALUES ('ffe7e8e5', 'ff111111', '')
+INSERT INTO tb_themes (background_color, text_color, background_image_path) VALUES ('ffe4e5e1', 'ff121212', '')
 ''';
 
 const createNoteSQL = '''

@@ -219,8 +219,8 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
     textColor = readTheme.textColor;
     backgroundColor = readTheme.backgroundColor;
     final bool isEInk = Prefs().eInkPaperMode;
-    String bc = isEInk ? 'e7e8e5' : convertDartColorToJs(readTheme.backgroundColor);
-    String tc = isEInk ? '111111' : convertDartColorToJs(readTheme.textColor);
+    String bc = isEInk ? 'e4e5e1' : convertDartColorToJs(readTheme.backgroundColor);
+    String tc = isEInk ? '121212' : convertDartColorToJs(readTheme.textColor);
 
     webViewController.evaluateJavascript(source: '''
       changeStyle({
@@ -241,8 +241,8 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
       if (!mounted) return;
       BookStyle style = bookStyle ?? Prefs().bookStyle;
       final bool isEInk = Prefs().eInkPaperMode;
-      String bc = isEInk ? 'e7e8e5' : convertDartColorToJs(backgroundColor ?? Prefs().readTheme.backgroundColor);
-      String tc = isEInk ? '111111' : convertDartColorToJs(textColor ?? Prefs().readTheme.textColor);
+      String bc = isEInk ? 'e4e5e1' : convertDartColorToJs(backgroundColor ?? Prefs().readTheme.backgroundColor);
+      String tc = isEInk ? '121212' : convertDartColorToJs(textColor ?? Prefs().readTheme.textColor);
       webViewController.evaluateJavascript(source: '''
       changeStyle({
         fontSize: ${style.fontSize},
@@ -1083,6 +1083,9 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
   }
 
   Widget _buildHistoryCapsule() {
+    if (Prefs().eInkPaperMode) {
+      return const SizedBox.shrink();
+    }
     final l10n = L10n.of(context);
     final buttonColor = Color(int.parse('0x$textColor')).withAlpha(200);
 
@@ -1349,12 +1352,13 @@ class EpubPlayerState extends ConsumerState<EpubPlayer>
         _handlePointerEvents(event);
       },
       child: Scaffold(
+        backgroundColor: Prefs().eInkPaperMode ? const Color(0xFFE4E5E1) : null,
         resizeToAvoidBottomInset: false,
         body: Stack(
           children: [
             buildWebviewWithIOSWorkaround(context, url, initialCfi),
             readingInfoWidget(),
-            if (showHistory) _buildHistoryCapsule(),
+            if (showHistory && !Prefs().eInkPaperMode) _buildHistoryCapsule(),
             if (Prefs().openBookAnimation)
               SizedBox.expand(
                   child: IgnorePointer(
